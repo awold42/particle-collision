@@ -36,7 +36,7 @@ neutron.mass = 1; % Neutron mass (unitless for now)
 %}
 
 neutron = generate_particle("neutron", 5, 1.008, [randi([xboundary.min xboundary.max]) randi([yboundary.min yboundary.max]) randi([zboundary.min zboundary.max])], [randi([2500 10000]) randi([2500 10000]) randi([2500 10000])]);
-particles = [particles neutron];
+particles = [particles neutron]; % Added neutron to list of particles
 
 % U-235 Properties
 
