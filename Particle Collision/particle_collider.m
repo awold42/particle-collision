@@ -35,7 +35,7 @@ neutron.velocity = neutron_initial_velocity; % Neutron current velocity
 neutron.mass = 1; % Neutron mass (unitless for now)
 %}
 
-neutron = generate_particle("neutron", 5, 1.008, [randi([xboundary.min xboundary.max]) randi([yboundary.min yboundary.max]) randi([zboundary.min zboundary.max])], [randi([2500 10000]) randi([2500 10000]) randi([2500 10000])]);
+neutron = generate_particle("neutron", 5, 1.008, [500 500 500], [-46 -16 -68]);
 particles = [particles neutron]; % Added neutron to list of particles
 
 % U-235 Properties
@@ -53,11 +53,13 @@ uranium.velocity = uranium_initial_velocity; % Uranium current velocity
 uranium.mass = 2;
 %}
 
-uranium = generate_particle("uranium", 156, 235, [0, 0, 0], [0, 0, 0]);
+uranium = generate_particle("uranium", 156, 235, [0 0 0], [0 0 0]);
 particles = [particles uranium];
 
+tellurium = generate_particle("tellurium", 140, 127.6, [-240 -237 -302], [4 76 12]);
+particles = [particles tellurium];
 % Time
-dt = 0.00001; % Time step
+dt = 0.0001; % Time step
 t = 0;
 
 % Figure Initialization
@@ -67,21 +69,84 @@ frame_counter = 0;
 % Simulation loop
 while 1
     t = t + dt;
-    % Calculate distance between centers of each sphere
-    d = uranium.pos - neutron.pos;
-    dmag = sqrt(sum(d.^2));
-    l.mag = dmag - neutron.radius - uranium.radius; % Distance between sphere surfaces
 
-    n = d/dmag; % Normal vector
-    
+    % Calculate distance between centers of each sphere
+    for i = 1:size(particles, 2)
+        for j = 1:size(particles, 2)
+            d = particles(i).pos - particles(j).pos;
+            if d == 0
+                break;
+            end
+            dmag = sqrt(sum(d.^2));
+            lmag = dmag - particles(i).radius - particles(j).radius; % Distance between sphere surfaces
+            if  lmag <= 1E-5 % With neutrons
+                fprintf("COLLISION @ t = " + t + "s \n")
+        
+                n = d/dmag; % Normal vector
+        
+                % Account for sphere overlap
+                for k = 1:size(d,2)
+                    if d(k) ~= 0
+                        particles(i).pos(k) = particles(i).pos(k) + lmag;
+                    end
+                end
+        
+                % Conservation of momentum and kinetic energy system
+        
+                v_relative = particles(i).velocity - particles(j).velocity;
+                v_normal = (dot(n, v_relative))*n;
+        
+            %    uranium.velocity = (uranium.mass-neutron.mass)/(uranium.mass+neutron.mass)*uranium.velocity + (2*neutron.mass)/(uranium.mass+neutron.mass)*neutron.velocity; %v_normal;
+            %    neutron.velocity = (neutron.mass-uranium.mass)/(neutron.mass+uranium.mass)*neutron.velocity + (2*uranium.mass)/(uranium.mass+neutron.mass)*temp; %v_normal;
+        
+                particles(i).velocity = particles(i).velocity - (2*particles(j).mass)/(particles(i).mass + particles(j).mass)*v_normal;
+                particles(j).velocity = particles(j).velocity + (2*particles(i).mass)/(particles(i).mass + particles(j).mass)*v_normal;
+        
+                fprintf("P1 Velocity: [" + num2str(particles(i).velocity) + "]\n");
+                fprintf("P2 Velocity: [" + num2str(particles(j).velocity) + "]\n");
+        
+            end
+
+        end
+    end
+
+    for i = 1:size(particles, 2)
+        if particles(i).pos(1) > xboundary.max-particles(i).radius
+            particles(i).velocity(1) = -particles(i).velocity(1);
+        elseif particles(i).pos(1) < xboundary.min+particles(i).radius
+            particles(i).velocity(1) = -particles(i).velocity(1);
+        end
+
+        if particles(i).pos(2) > yboundary.max-particles(i).radius
+            particles(i).velocity(2) = -particles(i).velocity(2);
+        elseif particles(i).pos(2) < yboundary.min+particles(i).radius
+            particles(i).velocity(2) = -particles(i).velocity(2);
+        end
+
+        if particles(i).pos(3) > zboundary.max-particles(i).radius
+            particles(i).velocity(3) = -particles(i).velocity(3);
+        elseif particles(i).pos(3) < zboundary.min+particles(i).radius
+            particles(i).velocity(3) = -particles(i).velocity(3);
+        end
+    end    
+      
+
+    % Calculate new sphere positions
+
+    for i = 1:size(particles, 2)
+        particles(i).pos = particles(i).pos + dt*particles(i).velocity;
+    end
 
     % Figure Animation
     if mod(frame_counter, 3000) == 1
-         neutron_final = surf(neutron.px*neutron.radius+neutron.pos(1), neutron.py*neutron.radius+neutron.pos(2), neutron.pz*neutron.radius+neutron.pos(3), FaceColor= [0 0 1]);
+
+       for i = 1:size(particles, 2)
+         neutron_final = surf(particles(i).px*particles(i).radius+particles(i).pos(1), particles(i).py*particles(i).radius+particles(i).pos(2), particles(i).pz*particles(i).radius+particles(i).pos(3), FaceColor= [0 0 1]);
          hold on
-         uranium_final = surf(uranium.px*uranium.radius+uranium.pos(1), uranium.py*uranium.radius+uranium.pos(2), uranium.pz*uranium.radius+uranium.pos(3), FaceColor= [0 1 0]);
-         hold off
-        
+       end
+
+        hold off
+
         title(sprintf("t = %.1f", t))
         %view(-45, 45);
         
@@ -123,6 +188,7 @@ while 1
     end
     %}
     
+    %{
     if uranium.pos(1) > xboundary.max-uranium.radius || uranium.pos(1) < xboundary.min+uranium.radius
         uranium.velocity(1) = -uranium.velocity(1);
     end
@@ -142,47 +208,17 @@ while 1
     if neutron.pos(3) > zboundary.max-neutron.radius || neutron.pos(3) < zboundary.min+neutron.radius
         neutron.velocity(3) = -neutron.velocity(3);
     end
-    
+    %}
 
     % w/ Neutrons
-    if  l.mag <= 1E-5 % With neutrons
-        fprintf("COLLISION @ t = " + t + "s \n")
-        
-        % Account for sphere overlap
-        for i = 1:size(d,2)
-            if d(i) ~= 0
-                neutron.pos(i) = neutron.pos(i) + l.mag;
-            end
-        end
-
-        % Conservation of momentum and kinetic energy system
-        
-        temp = uranium.velocity;
-
-        v_relative = uranium.velocity - neutron.velocity;
-        v_normal = (dot(n, v_relative))*n;
-
-    %    uranium.velocity = (uranium.mass-neutron.mass)/(uranium.mass+neutron.mass)*uranium.velocity + (2*neutron.mass)/(uranium.mass+neutron.mass)*neutron.velocity; %v_normal;
-    %    neutron.velocity = (neutron.mass-uranium.mass)/(neutron.mass+uranium.mass)*neutron.velocity + (2*uranium.mass)/(uranium.mass+neutron.mass)*temp; %v_normal;
-
-        uranium.velocity = uranium.velocity - (2*neutron.mass)/(uranium.mass + neutron.mass)*v_normal;
-        neutron.velocity = neutron.velocity + (2*uranium.mass)/(uranium.mass + neutron.mass)*v_normal;
-
-        fprintf("Neutron Velocity: [" + num2str(neutron.velocity) + "]\n");
-        fprintf("Uranium Velocity: [" + num2str(uranium.velocity) + "]\n");
-        
-    end
-
-    % Calculate new sphere positions
-    uranium.pos = uranium.pos + dt*uranium.velocity;
-    neutron.pos = neutron.pos + dt*neutron.velocity;
+   
 
    
     frame_counter = frame_counter + 1;
 end
 
 % Output data
-fprintf("Neutron Center Position: [" + num2str(neutron.pos) + "]\n");
-fprintf("Uranium Center Position: [" + num2str(uranium.pos) + "]\n");
+%fprintf("Neutron Center Position: [" + num2str(neutron.pos) + "]\n");
+%fprintf("Uranium Center Position: [" + num2str(uranium.pos) + "]\n");
 
 
