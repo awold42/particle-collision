@@ -36,7 +36,7 @@ neutron.mass = 1; % Neutron mass (unitless for now)
 %}
 
 for i = 1:20
-    neutron = generate_particle("neutron", 5, 1.008, [-150*randi([2 6]) 150*randi([-2 6]) -150*randi([-2 6])], [randi([0 2000]) randi([0 2000]) randi([0 2000])]);
+    neutron = generate_particle("neutron", 5, 1.008, [randi([-750 750]) randi([-750 750]) randi([-750 750])], [randi([0 2000]) randi([0 2000]) randi([0 2000])]);
     particles = [particles neutron]; % Added neutron to list of particles
 end
 
@@ -55,9 +55,10 @@ uranium.velocity = uranium_initial_velocity; % Uranium current velocity
 uranium.mass = 2;
 %}
 
-uranium = generate_particle("uranium", 156, 235, [0 0 0], [0 0 0]);
-particles = [particles uranium];
-
+for i = 1:10
+    uranium = generate_particle("uranium", 20, 235, [randi([-750 750]) randi([-750 750]) randi([-750 750])], [0 0 0]); % r = 156
+    particles = [particles uranium];
+end
 % Time
 dt = 0.01; % Time step
 t = 0;
@@ -65,6 +66,8 @@ t = 0;
 % Figure Initialization
 figure(Name="Neutron Collision")
 frame_counter = 0;
+
+collision = [];
 
 % Simulation loop
 while 1
@@ -81,17 +84,14 @@ while 1
             lmag = dmag - particles(i).radius - particles(j).radius; % Distance between sphere surfaces
 
             % Check for collision with another particle
-            if  lmag <= 1E-4 
+            if  lmag <= 1E-4
+                
+                collision = particles(i).name + particles(j).name;
                 fprintf("COLLISION @ t = " + t + "s \n")
-        
+                
                 n = d/dmag; % Normal vector
         
-                % Account for sphere overlap
-                %for k = 1:size(d,2)
-                %    if d(k) ~= 0
-                %        particles(i).pos(k) = particles(i).pos(k) - lmag;
-                %    end
-                %end
+                
         
                 % Conservation of momentum and kinetic energy system
         
@@ -100,7 +100,21 @@ while 1
         
                 particles(i).velocity = particles(i).velocity - (2*particles(j).mass)/(particles(i).mass + particles(j).mass)*v_normal;
                 particles(j).velocity = particles(j).velocity + (2*particles(i).mass)/(particles(i).mass + particles(j).mass)*v_normal;
-        
+                
+                fprintf("P1 Name: [" + particles(i).name + "]\n");
+                fprintf("P2 Name: [" + particles(j).name + "]\n");
+                
+                if collision == "uraniumneutron" || collision == "neutronuranium"
+                    fprintf("FISSION\n");
+                    
+                    for k = 1:3
+                        neutron = generate_particle("neutron", 5, 1.008, particles(j).pos+10*k, [randi([0 2000]) randi([0 2000]) randi([0 2000])]);
+                        particles = [particles neutron]; % Added neutron to list of particles
+                    end
+                    particles(i) = [];
+                    particles(j) = [];
+                end
+
                 fprintf("P1 Velocity: [" + num2str(particles(i).velocity) + "]\n");
                 fprintf("P2 Velocity: [" + num2str(particles(j).velocity) + "]\n");
         
