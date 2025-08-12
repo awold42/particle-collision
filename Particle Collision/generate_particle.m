@@ -6,7 +6,11 @@ function particle = generate_particle(name, radius, mass, pos, velocity)
     particle.pos = pos;
     particle.velocity = velocity;
 
-    num_faces = 10;
+    if radius <= 5
+        num_faces = 5;
+    else 
+        num_faces = 10;
+    end
 
     [x, y, z] = sphere(num_faces);
     particle.px = x;

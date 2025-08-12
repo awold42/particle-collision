@@ -7,10 +7,10 @@ clc; clear;
 % All velocities are measured in pm/s
 % Mass is in amu
 
-particles = [];
+particles = zeros([100, 5]);
 
 % Boundary Properties
-boundary = 500;
+boundary = 1000;
 xboundary.max = boundary;
 xboundary.min = -boundary;
 
@@ -36,8 +36,8 @@ neutron.mass = 1; % Neutron mass (unitless for now)
 %}
 
 for i = 1:20
-    neutron = generate_particle("neutron", 5, 1.008, [randi([-400 400]) randi([-400 400]) randi([-400 400])], [randi([0 2000]) randi([0 2000]) randi([0 2000])]);
-    particles = [particles neutron]; % Added neutron to list of particles
+    neutron = generate_particle("neutron", 5, 1.008, [randi([-750 750]) randi([-750 750]) randi([-750 750])], [randi([0 2000]) randi([0 2000]) randi([0 2000])]);
+    particles(i) = neutron; % Added neutron to list of particles
 end
 
 % U-235 Properties
@@ -55,9 +55,9 @@ uranium.velocity = uranium_initial_velocity; % Uranium current velocity
 uranium.mass = 2;
 %}
 
-for i = 1:30
-    uranium = generate_particle("uranium", 20, 235, [randi([-400 400]) randi([-400 400]) randi([-400 400])], [0 0 0]); % r = 156
-    particles = [particles uranium];
+for i = 21:30
+    uranium = generate_particle("uranium", 20, 235, [randi([-750 750]) randi([-750 750]) randi([-750 750])], [0 0 0]); % r = 156
+    particles(i) = uranium;
 end
 % Time
 dt = 0.01; % Time step
@@ -66,12 +66,6 @@ t = 0;
 % Figure Initialization
 figure(Name="Neutron Collision")
 frame_counter = 0;
-fission_counter = 0;
-
-% Draw control rod
-[cx, cy, cz] = cylinder(20);
-
-hold on
 
 % Simulation loop
 while 1
@@ -108,9 +102,7 @@ while 1
                 
                 if collision == "uraniumneutron" || collision == "neutronuranium"
                     fprintf("FISSION\n");
-
-                    fission_counter = fission_counter + 1;
-
+                    
                     for k = 1:3
                         neutron = generate_particle("neutron", 5, 1.008, particles(j).pos+10*k, [randi([0 2000]) randi([0 2000]) randi([0 2000])]);
                         particles = [particles neutron]; % Added neutron to list of particles
@@ -157,18 +149,16 @@ while 1
     end
 
     % Figure Animation
-    if mod(frame_counter, 2) == 1
-        
-       surf(cx, cy, cz*1000-500);
-       hold on
+    if mod(frame_counter, 5) == 1
+
        for i = 1:size(particles, 2)
          neutron_final = surf(particles(i).px*particles(i).radius+particles(i).pos(1), particles(i).py*particles(i).radius+particles(i).pos(2), particles(i).pz*particles(i).radius+particles(i).pos(3), FaceColor= "interp", EdgeColor="none");
          hold on
        end
 
         hold off
-        power = fission_counter * 200 / t;
-        title(sprintf("t = %.1f, Power = %.2f", t, power))
+
+        title(sprintf("t = %.1f", t))
         %view(-45, 45);
         
         view(frame_counter/10,45)
